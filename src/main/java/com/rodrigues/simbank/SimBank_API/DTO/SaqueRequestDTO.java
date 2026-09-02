@@ -14,11 +14,11 @@ public class SaqueRequestDTO extends TransacaoRequestDTO{
         this.contaOrigemId = contaOriemId;
     }
 
-    public Long getContaOriemId() {
+    public Long getContaOrigemId() {
         return contaOrigemId;
     }
 
-    public void setContaOriemId(Long contaOriemId) {
-        this.contaOrigemId = contaOriemId;
+    public void setContaOrigemId(Long contaOrigemId) {
+        this.contaOrigemId = contaOrigemId;
     }
 }
