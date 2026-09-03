@@ -3,6 +3,7 @@ package com.rodrigues.simbank.SimBank_API.Controllers;
 import com.rodrigues.simbank.SimBank_API.DTO.DepositoRequestDTO;
 import com.rodrigues.simbank.SimBank_API.DTO.SaqueRequestDTO;
 import com.rodrigues.simbank.SimBank_API.DTO.TransacaoResponseDTO;
+import com.rodrigues.simbank.SimBank_API.DTO.TransferenciaRequestDTO;
 import com.rodrigues.simbank.SimBank_API.Services.TransacaoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,5 +27,8 @@ public class TransacaoController {
     public TransacaoResponseDTO saque(@RequestBody SaqueRequestDTO saque){
         return transacaoService.sacar(saque);
     }
+
+    @PostMapping("/transferir")
+    public TransacaoResponseDTO transferir(@RequestBody TransferenciaRequestDTO transfere){ return transacaoService.transferir(transfere);}
 
 }

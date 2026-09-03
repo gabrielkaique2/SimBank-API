@@ -1,20 +1,19 @@
 package com.rodrigues.simbank.SimBank_API.Services;
 
-import com.rodrigues.simbank.SimBank_API.DTO.DepositoRequestDTO;
-import com.rodrigues.simbank.SimBank_API.DTO.SaqueRequestDTO;
+import com.rodrigues.simbank.SimBank_API.DTO.*;
 import com.rodrigues.simbank.SimBank_API.Entities.Conta;
 import com.rodrigues.simbank.SimBank_API.Entities.Transacao;
-import com.rodrigues.simbank.SimBank_API.DTO.TransacaoRequestDTO;
-import com.rodrigues.simbank.SimBank_API.DTO.TransacaoResponseDTO;
 import com.rodrigues.simbank.SimBank_API.Repositories.TransacaoRepository;
 import com.rodrigues.simbank.SimBank_API.Repositories.ContaRepository;
 import com.rodrigues.simbank.SimBank_API.Exception.ResourceNotFoundException;
 import com.rodrigues.simbank.SimBank_API.Utilidades.TipoTransacao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class TransacaoService {
@@ -26,6 +25,7 @@ public class TransacaoService {
     private ContaRepository contaRepository;
 
     //depositar(?)
+    @Transactional
     public TransacaoResponseDTO depositar(DepositoRequestDTO dto){
 
         // 1. busca a Conta pelo dto.getContaDestinoId()
@@ -34,6 +34,11 @@ public class TransacaoService {
 
         // 2. soma dto.getValor() ao saldoAtual da conta
         BigDecimal saldoAtual = conta.getSaldoAtual();
+
+        int resultado = saldoAtual.compareTo(dto.getValor());
+        if (dto.getValor().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("O valor do depósito deve ser positivo");
+        }
         BigDecimal novoSaldo = saldoAtual.add(dto.getValor());
 
 
@@ -66,6 +71,7 @@ public class TransacaoService {
     }
 
     //sacar(?)
+    @Transactional
     public TransacaoResponseDTO sacar(SaqueRequestDTO dto){
         // 1. busca a Conta pelo dto.getContaOrigemId()
         Conta conta = contaRepository.findById(dto.getContaOrigemId())
@@ -106,6 +112,59 @@ public class TransacaoService {
 
             return transacaoResponseDTO;
 
+    }
+
+    @Transactional
+    public TransacaoResponseDTO transferir(TransferenciaRequestDTO dto) {
+
+        // busca conta origem
+        Conta contaOrigem = contaRepository.findById(dto.getContaOrigemId())
+                .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaOrigemId()));
+
+        // busca conta destino
+        Conta contaDestino = contaRepository.findById(dto.getContaDestinoId())
+                .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaDestinoId()));
+
+        // valida saldo
+        BigDecimal saldoDestino = contaDestino.getSaldoAtual();
+        BigDecimal saldoOrigem = contaOrigem.getSaldoAtual();
+        BigDecimal saldoTransacao = dto.getValor();
+        int resultado = saldoOrigem.compareTo(saldoTransacao);
+        if(resultado < 0){
+            throw new RuntimeException("Saldo insulficiente na conta " + contaOrigem.getRowid());
+        }
+
+        // subtrai da origem, soma no destino
+        BigDecimal novoOrigem = saldoOrigem.subtract(dto.getValor());
+        BigDecimal novoDestino = saldoDestino.add(dto.getValor());
+
+        // salva as duas
+        contaOrigem.setSaldoAtual(novoOrigem);
+        contaDestino.setSaldoAtual(novoDestino);
+        Conta contaOrigemAtualizada = contaRepository.save(contaOrigem);
+        Conta contaDestinoAtualizada = contaRepository.save(contaDestino);
+
+        // cria e salva a transação
+        Transacao transacao = new Transacao();
+        transacao.setValor(dto.getValor());
+        transacao.setTipoTransacao(TipoTransacao.TRANSFERENCIA);
+        transacao.setTimeStamp(Instant.now());
+        transacao.setContaDestinoId(contaDestinoAtualizada.getRowid());
+        transacao.setContaOrigemId(contaOrigemAtualizada.getRowid());
+        Transacao salvar = transacaoRepository.save(transacao);
+
+        TransacaoResponseDTO transacaoResponseDTO = new TransacaoResponseDTO();
+        transacaoResponseDTO.setContaOrigemId(salvar.getContaOrigemId());
+        transacaoResponseDTO.setContaDestinoId(salvar.getContaDestinoId());
+        transacaoResponseDTO.setRowid(salvar.getRowid());
+        transacaoResponseDTO.setTimeStamp(salvar.getTimeStamp());
+        transacaoResponseDTO.setTipoTransacao(salvar.getTipoTransacao());
+        transacaoResponseDTO.setValor(salvar.getValor());
+
+        return transacaoResponseDTO;
+
+        // se qualquer exception for lançada em qualquer ponto daqui,
+        // o Spring desfaz (rollback) TUDO que já foi salvo nessa execução
     }
 
 }
