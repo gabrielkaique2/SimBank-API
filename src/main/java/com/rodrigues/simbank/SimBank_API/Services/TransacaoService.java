@@ -24,29 +24,23 @@ public class TransacaoService {
     @Autowired
     private ContaRepository contaRepository;
 
-    //depositar(?)
     @Transactional
     public TransacaoResponseDTO depositar(DepositoRequestDTO dto){
 
-        // 1. busca a Conta pelo dto.getContaDestinoId()
         Conta conta = contaRepository.findById(dto.getContaDestinoId())
                 .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaDestinoId()));
 
-        // 2. soma dto.getValor() ao saldoAtual da conta
         BigDecimal saldoAtual = conta.getSaldoAtual();
 
-        int resultado = saldoAtual.compareTo(dto.getValor());
+
         if (dto.getValor().compareTo(BigDecimal.ZERO) <= 0) {
             throw new RuntimeException("O valor do depósito deve ser positivo");
         }
         BigDecimal novoSaldo = saldoAtual.add(dto.getValor());
 
-
-        // 3. salva a conta (contaRepository.save)
        conta.setSaldoAtual(novoSaldo);
-       Conta contaAtualizada = contaRepository.save(conta);
+       contaRepository.save(conta);
 
-        // 4. cria uma nova Transacao (tipoTransacao=DEPOSITO, valor, timeStamp=Instant.now(), contaOrigemId=null, contaDestinoId=X)
         Transacao transacao = new Transacao();
         transacao.setTipoTransacao(TipoTransacao.DEPOSITO);
         transacao.setValor(dto.getValor());
@@ -54,11 +48,7 @@ public class TransacaoService {
         transacao.setContaOrigemId(null);
         transacao.setContaDestinoId(dto.getContaDestinoId());
 
-        // 5. salva a Transacao (transacaoRepository.save)
-
         Transacao salvar = transacaoRepository.save(transacao);
-
-        // 6. converte pra TransacaoResponseDTO e retorna
 
         TransacaoResponseDTO transacaoResponseDTO = new TransacaoResponseDTO();
         transacaoResponseDTO.setContaDestinoId(salvar.getContaDestinoId());
@@ -70,29 +60,24 @@ public class TransacaoService {
         return transacaoResponseDTO;
     }
 
-    //sacar(?)
     @Transactional
     public TransacaoResponseDTO sacar(SaqueRequestDTO dto){
-        // 1. busca a Conta pelo dto.getContaOrigemId()
         Conta conta = contaRepository.findById(dto.getContaOrigemId())
                 .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaOrigemId()));
 
-        // 2. valida: conta.getSaldoAtual() é maior ou igual a dto.getValor()?
-        //    se não for → lança exception (por enquanto, RuntimeException genérica)
         BigDecimal saldoAtual = conta.getSaldoAtual();
-
             int resultado = saldoAtual.compareTo(dto.getValor());
             if(resultado < 0){
                 throw new RuntimeException("Saldo insuficiente");
             }
-            // 3. subtrai dto.getValor() do saldoAtual
+            if(dto.getValor().compareTo(BigDecimal.ZERO) <= 0){
+                throw new RuntimeException("O valor do saque deve ser positivo");
+            }
+
             BigDecimal novoSaldo = saldoAtual.subtract(dto.getValor());
             conta.setSaldoAtual(novoSaldo);
+            contaRepository.save(conta);
 
-            // 4. salva a conta
-            Conta contaAtualizada = contaRepository.save(conta);
-
-            // 5. cria e salva uma Transacao (tipo=SAQUE, contaOrigemId=X, contaDestinoId=null)
             Transacao transacao = new Transacao();
             transacao.setContaOrigemId(dto.getContaOrigemId());
             transacao.setContaDestinoId(null);
@@ -101,7 +86,6 @@ public class TransacaoService {
             transacao.setValor(dto.getValor());
             Transacao salvar = transacaoRepository.save(transacao);
 
-            // 6. converte pra TransacaoResponseDTO e retorna
             TransacaoResponseDTO transacaoResponseDTO = new TransacaoResponseDTO();
             transacaoResponseDTO.setContaOrigemId(salvar.getContaOrigemId());
             transacaoResponseDTO.setContaDestinoId(salvar.getContaDestinoId());
@@ -117,15 +101,12 @@ public class TransacaoService {
     @Transactional
     public TransacaoResponseDTO transferir(TransferenciaRequestDTO dto) {
 
-        // busca conta origem
         Conta contaOrigem = contaRepository.findById(dto.getContaOrigemId())
                 .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaOrigemId()));
 
-        // busca conta destino
         Conta contaDestino = contaRepository.findById(dto.getContaDestinoId())
                 .orElseThrow(()-> new ResourceNotFoundException("Conta Não encontrada com o ID "+ dto.getContaDestinoId()));
 
-        // valida saldo
         BigDecimal saldoDestino = contaDestino.getSaldoAtual();
         BigDecimal saldoOrigem = contaOrigem.getSaldoAtual();
         BigDecimal saldoTransacao = dto.getValor();
@@ -133,18 +114,18 @@ public class TransacaoService {
         if(resultado < 0){
             throw new RuntimeException("Saldo insulficiente na conta " + contaOrigem.getRowid());
         }
+        if(dto.getValor().compareTo(BigDecimal.ZERO) <= 0){
+            throw new RuntimeException("O valor da transferencia deve ser positivo");
+        }
 
-        // subtrai da origem, soma no destino
         BigDecimal novoOrigem = saldoOrigem.subtract(dto.getValor());
         BigDecimal novoDestino = saldoDestino.add(dto.getValor());
 
-        // salva as duas
         contaOrigem.setSaldoAtual(novoOrigem);
         contaDestino.setSaldoAtual(novoDestino);
         Conta contaOrigemAtualizada = contaRepository.save(contaOrigem);
         Conta contaDestinoAtualizada = contaRepository.save(contaDestino);
 
-        // cria e salva a transação
         Transacao transacao = new Transacao();
         transacao.setValor(dto.getValor());
         transacao.setTipoTransacao(TipoTransacao.TRANSFERENCIA);
@@ -162,9 +143,6 @@ public class TransacaoService {
         transacaoResponseDTO.setValor(salvar.getValor());
 
         return transacaoResponseDTO;
-
-        // se qualquer exception for lançada em qualquer ponto daqui,
-        // o Spring desfaz (rollback) TUDO que já foi salvo nessa execução
     }
 
 }
