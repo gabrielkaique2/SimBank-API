@@ -3,10 +3,14 @@ package com.rodrigues.simbank.SimBank_API.Controllers;
 import com.rodrigues.simbank.SimBank_API.DTO.UsuarioRequestDTO;
 import com.rodrigues.simbank.SimBank_API.DTO.UsuarioResponseDTO;
 import com.rodrigues.simbank.SimBank_API.Services.UsuarioService;
+import com.rodrigues.simbank.SimBank_API.Utilidades.TipoRole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collection;
 import java.util.List;
 
 @RestController
@@ -27,8 +31,10 @@ public class UsuarioController {
     }
 
     @GetMapping(path = "/{rowid}")
-    public ResponseEntity<UsuarioResponseDTO> obterUmUsuario(@PathVariable Long rowid){
-        return ResponseEntity.ok(usuarioService.obterUmUsuario(rowid));
+    public ResponseEntity<UsuarioResponseDTO> obterUmUsuario(@PathVariable Long rowid, Authentication authentication){
+        String email = authentication.getName();
+        Collection<? extends GrantedAuthority> roles = authentication.getAuthorities();
+        return ResponseEntity.ok(usuarioService.obterUmUsuario(rowid,email,roles));
     }
 
     @DeleteMapping("/{rowid}")

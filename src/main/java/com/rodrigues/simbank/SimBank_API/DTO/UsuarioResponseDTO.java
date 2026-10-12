@@ -1,20 +1,24 @@
 package com.rodrigues.simbank.SimBank_API.DTO;
 
+import com.rodrigues.simbank.SimBank_API.Utilidades.TipoRole;
+
 public class UsuarioResponseDTO {
 
     private Long rowid;
     private String nome;
     private String cpf;
     private String email;
+    private TipoRole role;
 
     public UsuarioResponseDTO(){
     }
 
-    public UsuarioResponseDTO(Long rowid, String nome, String cpf, String email) {
+    public UsuarioResponseDTO(Long rowid, String nome, String cpf, String email, TipoRole role) {
         this.rowid = rowid;
         this.nome = nome;
         this.cpf = cpf;
         this.email = email;
+        this.role = role;
     }
 
     public Long getRowid() {
@@ -43,5 +47,13 @@ public class UsuarioResponseDTO {
     }
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public TipoRole getRole() {
+        return role;
+    }
+
+    public void setRole(TipoRole role) {
+        this.role = role;
     }
 }

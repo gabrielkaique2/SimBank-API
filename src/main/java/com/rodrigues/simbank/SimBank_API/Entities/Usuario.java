@@ -1,6 +1,7 @@
 package com.rodrigues.simbank.SimBank_API.Entities;
 
 import jakarta.persistence.*;
+import com.rodrigues.simbank.SimBank_API.Utilidades.TipoRole;
 
 @Entity
 @Table(name = "tb_usuario")
@@ -14,16 +15,19 @@ public class Usuario {
     private String cpf;
     private String email;
     private String senha;
+    @Enumerated(EnumType.STRING)
+    private TipoRole role;
 
     public Usuario() {
     }
 
-    public Usuario(Long rowid, String nome, String cpf, String email, String senha) {
+    public Usuario(Long rowid, String nome, String cpf, String email, String senha, TipoRole role) {
         this.rowid = rowid;
         this.nome = nome;
         this.cpf = cpf;
         this.email = email;
         this.senha = senha; // refatorar mais tarde
+        this.role = role;
     }
 
     public Long getRowid() {
@@ -66,4 +70,7 @@ public class Usuario {
         this.senha = senha;
     }
 
+    public TipoRole getRole() {return role;}
+
+    public void setRole(TipoRole role) {this.role = role;}
 }
